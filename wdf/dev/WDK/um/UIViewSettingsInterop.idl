@@ -1,0 +1,69 @@
+import "inspectable.idl";
+
+cpp_quote("#include <winapifamily.h>")
+
+cpp_quote("#if (NTDDI_VERSION >= NTDDI_WINTHRESHOLD)")
+
+#pragma region Desktop Family
+cpp_quote("#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)")
+
+[
+    uuid(3694dbf9-8f68-44be-8ff5-195c98ede8a6),
+]
+interface IUIViewSettingsInterop : IInspectable
+{
+    // Callers can request IUIViewSettings using riid/ppv
+    HRESULT GetForWindow([in] HWND hwnd, [in] REFIID riid, [out, retval, iid_is(riid)] void** ppv);
+}
+
+cpp_quote("#endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) */")
+#pragma endregion
+
+cpp_quote("#endif //(NTDDI_VERSION >= NTDDI_WINTHRESHOLD)")
+
+cpp_quote("#if (NTDDI_VERSION >= NTDDI_WIN10_RS5)")
+
+cpp_quote("#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)")
+
+[
+    uuid(ECC62F5D-14AA-4971-9F06-B2159B1FFD40),
+    local
+]
+interface IClassicApplicationViewFactory : IUnknown
+{
+    // create an instance of IClassicApplicationView inited with hwnd
+    HRESULT GetForWindow([in] HWND appWindow, [in] REFIID riid, [out, retval, iid_is(riid)] void** result);
+}
+
+[
+    uuid(7A05F995-6242-440E-A64E-34B7ED3413D3),
+    local
+]
+interface IClassicApplicationView : IUnknown
+{
+    // return ApplicationViewTitleBar instance
+    HRESULT GetTitleBar([in] REFIID riid, [out, retval, iid_is(riid)] void** result);
+
+    HRESULT GetActiveIcon([out, retval] HICON* value);
+    HRESULT SetActiveIcon([in] HICON value);
+}
+
+[
+    uuid(7903BEDD-0A02-47CE-98E4-BE86137DD5A8),
+]
+library UIViewSettingsInterop
+{
+    // CLSID_ClassicApplicationViewFactory
+    [uuid(4A765F48-1D55-49DE-9B20-19F09AD0D1A7)] coclass ClassicApplicationViewFactory { interface IClassicApplicationViewFactory; }
+}
+
+// ApplicationViewTitleBar uses properties stored on the hwnd via these properties.
+cpp_quote("#ifdef __cplusplus")
+cpp_quote("constexpr PCWSTR TitleBarBackgroundColor     = L\"TitleBar.BackgroundColor\";")
+cpp_quote("constexpr PCWSTR TitleBarForegroundColor     = L\"TitleBar.ForegroundColor\";")
+cpp_quote("constexpr PCWSTR TitleBarIcon                = L\"TitleBar.Icon\";")
+cpp_quote("#endif")
+
+cpp_quote("#endif /* WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP) */")
+
+cpp_quote("#endif // (NTDDI_VERSION >= NTDDI_WIN10_RS5)")
