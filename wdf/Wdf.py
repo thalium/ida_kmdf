@@ -1,6 +1,7 @@
 import os
 
 import ida_bytes
+import ida_funcs
 import ida_nalt
 import ida_struct
 import ida_typeinf
@@ -12,6 +13,7 @@ LOG_ERROR = "error"
 LOG_WARN = "warn"
 LOG_INFO = "info"
 LOG_DEBUG = "debug"
+
 
 def log(message: str, file=None, level=LOG_INFO, callee=LOG_DEBUG):
     log = f"[KMDF][{level}] {message}\n"
@@ -35,6 +37,7 @@ def log(message: str, file=None, level=LOG_INFO, callee=LOG_DEBUG):
 
     if file is None:
         idaapi.msg(log)
+
 
 def apply_driver_globals() -> bool:
     names = idautils.Names()
@@ -88,9 +91,36 @@ def apply_driver_globals() -> bool:
     return True
 
 
+def apply_wdffunctions_stroffs(tid, reg, ea):
+    func = ida_funcs.get_func(ea)
+    for ea in idautils.Heads(ea, func.end_ea):
+        insn = idautils.DecodeInstruction(ea)
+        for op in insn.ops:
+            # This is a simple heuristic, we want an instruction of the for
+            # mov reg, [reg + offset], so the instruction must have either
+            # an operand of type phrase or displacement
+            if op.type in [idaapi.o_phrase, idaapi.o_displ] and op.reg == reg:
+                idaapi.op_stroff(insn, 1, tid, 0)
+                # For now, we stop at the first one in case the register changes
+                # We do not want to miss type something
+                # TODO: check if register changes and stop then
+                return
+
+
 def apply_function_xrefs(wdf_functions_ea):
+    tid = idaapi.tid_array(1)
+    tid[0] = idaapi.get_struct_id("WDFFUNCTIONS")
     xrefs = idautils.XrefsTo(wdf_functions_ea)
-    log(f"Xrefs to wdfFunctions: {list(xrefs)}", level=LOG_INFO)
+    for xref in xrefs:
+        frm = xref.frm
+        insn = idautils.DecodeInstruction(frm)
+        if insn.Op1.type == idaapi.o_reg:
+            # We want loading instruction, to the first operand
+            # ought to be a register
+            reg = insn.Op1.reg
+            # tid.cast because op_stroff used in this function
+            # wants a pointer
+            apply_wdffunctions_stroffs(tid.cast(), reg, frm)
 
 
 def apply_wdf_functions() -> bool:
@@ -121,11 +151,12 @@ def apply_wdf_functions() -> bool:
                 ok = ida_typeinf.apply_cdecl(None, ptr, "WDFFUNCTIONS *;", 0)
                 if not ok:
                     idaapi.warning("Failed to apply WDFFUNCTIONS * type")
-                    return False
+                    # Continue because there might be other references, even though
+                    # this would be surprising
+                    continue
                 apply_function_xrefs(ptr)
 
     if struc is None:
-        
         log("Failed to find BIND_INFO struc", level=LOG_ERROR)
         idaapi.warning("Failed to find BIND_INFO struc")
         return False
@@ -282,7 +313,7 @@ def load_wdf(til_dir=os.path.join(idc.idadir(), "til")) -> bool:
 
     ok = ida_typeinf.add_til(til_path, ida_typeinf.ADDTIL_DEFAULT)
     if ok != ida_typeinf.ADDTIL_OK:
-        
+
         log("Failed to load WDF til", level=LOG_ERROR)
         return False
 
@@ -296,6 +327,5 @@ def load_wdf(til_dir=os.path.join(idc.idadir(), "til")) -> bool:
     if not ok:
         idaapi.warning("Failed to apply WDF_BIND_INFO type")
 
-    
     log("WDF til successfully loaded", level=LOG_INFO)
     return True

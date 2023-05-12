@@ -2,6 +2,7 @@ import idaapi
 import idc
 import Wdf as Wdf
 
+
 class WdfPlugin(idaapi.plugin_t):
     flags = idaapi.PLUGIN_PROC
     comment = "Detect wdf version and apply associated wdf types"
@@ -14,9 +15,11 @@ class WdfPlugin(idaapi.plugin_t):
     def run(self):
         if Wdf.load_wdf():
             Wdf.apply_wdf()
+            idaapi.auto_wait()
 
     def term(self):
         pass
+
 
 def PLUGIN_ENTRY():
     return WdfPlugin()
