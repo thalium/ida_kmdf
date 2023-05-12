@@ -26,13 +26,15 @@ Finally, we clearly have a better pseudocode and the real analysis can start!
 
 # Installation
 
-1. Copy paste the plugin in ` %APPDATA%/Hex-Rays/IDA Pro/plugins`
-2. Enjoy
+1. Copy paste the plugin in `%APPDATA%/Hex-Rays/IDA Pro/plugins`
+2. Copy the generated .til in `%APPDATA%/Hex-Rays/IDA Pro/til`
+3. Enjoy
 
 # Usage
 
 There are three different cases:
 
-1. til file generation: `python {sys.argv[0]} make_til [--wdf=<wdf_dir>] [--wdk=<wdk_dir>] [--til=<til_dir>] [--no_casts]` 
-2. ask for type application: `python {sys.argv[0]} analyze <file(s)>`
-3. automatic type application : `nothing to do here (:`
+1. til file generation: `python wdfalyzer.py make_til [--wdf=<wdf_dir>] [--wdk=<wdk_dir>] [--til=<til_dir>] [--no_casts]` 
+2. ask for type application: `python wdfalyzer.py analyze <file(s)>`
+3. automatic type application: `nothing to do here (:` -> Just launch you driver on IDA with the plugin installed and the wdf til in
+the ida til directory
