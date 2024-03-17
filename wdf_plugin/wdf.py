@@ -134,6 +134,8 @@ def apply_function_xrefs(wdf_functions_ea, wdffunctions_tid):
 def apply_wdf_functions() -> bool:
     struc = None
 
+    # Since ida 8.4, the _WDF_BIND_INFO structure is not imported automatically so we have to import it manually
+    ida_typeinf.import_type(None, -1, "_WDF_BIND_INFO", ida_typeinf.IMPTYPE_OVERRIDE)
     tid = ida_typeinf.import_type(None, -1, "WDFFUNCTIONS", ida_typeinf.IMPTYPE_OVERRIDE)
     for idx, sid, name in idautils.Structs():
 
