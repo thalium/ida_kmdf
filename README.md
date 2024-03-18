@@ -26,8 +26,8 @@ Finally, we clearly have a better pseudocode and the real analysis can start!
 
 # Prerequisites
 
+* IDA (tested from 8.2 to 8.4, might work on older versions, but untested)
 * IDA Python
-* IDA 8.4
 * IDA SDK (tilib)
 * Microsoft WDK
 * Microsoft SDK
