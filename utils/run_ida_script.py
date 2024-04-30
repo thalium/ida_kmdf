@@ -20,7 +20,7 @@ class Ctx:
         if "IDA_DIR" not in os.environ.keys():
             errx(self, "missing IDA_DIR environment variable")
 
-        self.ida_dir = os.path.abspath(os.environ["IDA_DIR"])
+        self.ida_dir = os.path.abspath(os.environ["IDA_DIR"].strip('"\''))
         # log(f"* IDA_DIR:\t{self.ida_dir}")
         suffix = ".exe" if sys.platform == "win32" else ""
         self.ida32 = os.path.join(self.ida_dir, "idat" + suffix)
@@ -95,7 +95,7 @@ def run_ida(ctx: Ctx, input_file: str, script: str, script_args: [str] = []):
     code = process.wait()
 
     output = ""
-    with open(ctx.logfile, "r") as fh:
+    with open(ctx.logfile, "r", encoding = "UTF-8") as fh:
         output = fh.read()
 
     if code == 0:

@@ -238,7 +238,7 @@ def get_version_from_call(frm) -> str:
     """
     args_addrs = idaapi.get_arg_addrs(frm)
 
-    if len(args_addrs) != 4:
+    if args_addrs == None or len(args_addrs) != 4:
         return None, None
 
     insn = idautils.DecodeInstruction(args_addrs[2])  # BindInfo is the 3rd argument

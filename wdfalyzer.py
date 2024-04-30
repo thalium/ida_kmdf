@@ -7,7 +7,7 @@ if "IDA_DIR" not in os.environ.keys():
     print("fatal: missing IDA_DIR environment variable")
     sys.exit(1)
 
-ida_dir = os.path.abspath(os.environ["IDA_DIR"])
+ida_dir = os.path.abspath(os.environ["IDA_DIR"].strip('"\''))
 ida_plugins_dir = os.path.abspath(os.path.join(ida_dir, "plugins"))
 idat = "idat64.exe" if os.name == "nt" else "idat64"
 idat_filepath = os.path.join(ida_dir, idat)
@@ -70,7 +70,7 @@ def make_til():
         print("Failed to create WDF typelibs. See til_creator_output.txt")
         sys.exit(1)
 
-    with open("til_creator_output.txt", "r") as f:
+    with open("til_creator_output.txt", "r", encoding = "UTF-8") as f:
         for line in f:
             if line.startswith("Created"):
                 print(line, end="")
