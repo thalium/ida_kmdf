@@ -3,7 +3,6 @@ import os
 import ida_bytes
 import ida_funcs
 import ida_nalt
-import ida_struct
 import ida_typeinf
 import idaapi
 import idautils
@@ -132,23 +131,24 @@ def apply_function_xrefs(wdf_functions_ea, wdffunctions_tid):
 
 
 def apply_wdf_functions() -> bool:
-    struc = None
+    sid_found = False
 
     # Since ida 8.4, the _WDF_BIND_INFO structure is not imported automatically so we have to import it manually
-    ida_typeinf.import_type(None, -1, "_WDF_BIND_INFO", ida_typeinf.IMPTYPE_OVERRIDE)
-    tid = ida_typeinf.import_type(None, -1, "WDFFUNCTIONS", ida_typeinf.IMPTYPE_OVERRIDE)
+    idc.import_type(-1, "_WDF_BIND_INFO")
+    tid = idc.import_type(-1, "WDFFUNCTIONS")
     for idx, sid, name in idautils.Structs():
 
         if "_WDF_BIND_INFO" in name:
-            struc = ida_struct.get_struc(sid)
+            tif = ida_typeinf.tinfo_t()
+            sid_found = tif.get_type_by_tid(sid)
             xrefs = idautils.XrefsTo(sid)
 
             if xrefs is []:
                 log(
-                    "Failed to find xrefs to BIND_INFO struc",
+                    "Failed to find xrefs to BIND_INFO sid",
                     level=LOG_ERROR,
                 )
-                idaapi.warning("Failed to find xrefs to BIND_INFO struc")
+                idaapi.warning("Failed to find xrefs to BIND_INFO sid")
                 return False
 
             # Find the offset of FuncTable
@@ -175,9 +175,9 @@ def apply_wdf_functions() -> bool:
                     continue
                 apply_function_xrefs(ptr, tid)
 
-    if struc is None:
-        log("Failed to find BIND_INFO struc", level=LOG_ERROR)
-        idaapi.warning("Failed to find BIND_INFO struc")
+    if not sid_found:
+        log("Failed to find BIND_INFO tinfo", level=LOG_ERROR)
+        idaapi.warning("Failed to find BIND_INFO tinfo")
         return False
 
     return True
@@ -204,14 +204,9 @@ def find_wdf_version_via_str() -> str:
     next two dwords, which will be the major and the minor.
     """
 
-    ea = ida_bytes.bin_search(
-        0,
-        0xFFFFFFFFFFFFFFFF,
-        "KmdfLibrary".encode("utf-16le"),
-        None,
-        ida_bytes.BIN_SEARCH_FORWARD,
-        ida_bytes.BIN_SEARCH_NOSHOW,
-    )
+    # XXX there's a bug here where ida fails to handle utf-16le encoding type
+    # until after initial idb load (it will work if just running script again...)
+    ea = ida_bytes.find_string("KmdfLibrary", 0, 0xffffffffffffffff, None, "utf-16le")
     if ea == idaapi.BADADDR:
         return None, None
 
@@ -220,7 +215,7 @@ def find_wdf_version_via_str() -> str:
         return None, None
 
     for xref in xrefs:
-        ptr_size = 8 if idaapi.get_inf_structure().is_64bit() else 4
+        ptr_size = 8 if idaapi.inf_is_64bit() else 4
         major = idaapi.get_dword(xref.frm + ptr_size)
         minor = idaapi.get_dword(xref.frm + ptr_size + 4)
         bind_info = xref.frm - ptr_size
@@ -251,7 +246,7 @@ def get_version_from_call(frm) -> str:
     if bind_info is None:
         return None, None
 
-    ptr_size = 8 if idaapi.get_inf_structure().is_64bit() else 4
+    ptr_size = 8 if idaapi.inf_is_64bit() else 4
     major = idaapi.get_dword(bind_info + ptr_size * 2)
     minor = idaapi.get_dword(bind_info + ptr_size * 2 + 4)
 
@@ -317,7 +312,7 @@ def find_wdf_version():
     return version, bind_info
 
 
-def load_wdf(til_dir=os.path.join(idc.idadir(), "til")) -> bool:
+def load_wdf() -> bool:
     """
     Find the version of WDF and load the associated .til if it exists.
     """
@@ -327,10 +322,10 @@ def load_wdf(til_dir=os.path.join(idc.idadir(), "til")) -> bool:
         log("Could not find WDF version. Is this a WDF driver?", level=LOG_INFO)
         return False
 
-    if idaapi.get_inf_structure().is_64bit():
-        til_path = os.path.join(til_dir, f"wdf64-{wdf_version}.til")
+    if idaapi.inf_is_64bit():
+        til_path = f"wdf64-{wdf_version}.til"
     else:
-        til_path = os.path.join(til_dir, f"wdf-{wdf_version}.til")
+        til_path = f"wdf-{wdf_version}.til"
 
     ok = ida_typeinf.add_til(til_path, ida_typeinf.ADDTIL_DEFAULT)
     if ok != ida_typeinf.ADDTIL_OK:
